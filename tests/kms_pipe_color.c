@@ -28,6 +28,7 @@
 #include "drm.h"
 #include "drmtest.h"
 #include "igt.h"
+#include "igt_crc.h"
 
 IGT_TEST_DESCRIPTION("Test Color Features at Pipe level");
 

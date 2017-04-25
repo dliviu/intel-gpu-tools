@@ -23,6 +23,7 @@
  */
 
 #include "igt.h"
+#include "igt_crc.h"
 
 IGT_TEST_DESCRIPTION("Test render compression (RC), in which the main surface "
 		     "is complemented by a color control surface (CCS) that "

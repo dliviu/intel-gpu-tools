@@ -25,6 +25,7 @@
 /* This program tests whether the igt_draw library actually works. */
 
 #include "igt.h"
+#include "igt_crc.h"
 
 #define MAX_CONNECTORS 32
 

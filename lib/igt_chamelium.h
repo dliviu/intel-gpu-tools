@@ -28,6 +28,7 @@
 
 #include "config.h"
 #include "igt.h"
+#include "igt_crc.h"
 #include <stdbool.h>
 
 struct chamelium;

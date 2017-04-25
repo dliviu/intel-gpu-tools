@@ -25,6 +25,7 @@
  */
 
 #include "igt.h"
+#include "igt_crc.h"
 #include "igt_sysfs.h"
 #include <sys/types.h>
 #include <sys/stat.h>

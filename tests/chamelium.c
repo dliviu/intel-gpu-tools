@@ -26,6 +26,7 @@
 
 #include "config.h"
 #include "igt.h"
+#include "igt_crc.h"
 
 #include <fcntl.h>
 #include <string.h>

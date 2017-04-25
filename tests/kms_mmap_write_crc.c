@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "drmtest.h"
+#include "igt_crc.h"
 #include "igt_debugfs.h"
 #include "igt_kms.h"
 #include "intel_chipset.h"

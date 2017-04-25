@@ -22,6 +22,7 @@
  */
 
 #include "igt.h"
+#include "igt_crc.h"
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>

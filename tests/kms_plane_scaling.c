@@ -23,6 +23,7 @@
  */
 
 #include "igt.h"
+#include "igt_crc.h"
 #include <math.h>
 
 

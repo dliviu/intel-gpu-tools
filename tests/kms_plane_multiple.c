@@ -23,6 +23,7 @@
  */
 
 #include "igt.h"
+#include "igt_crc.h"
 #include "drmtest.h"
 #include <errno.h>
 #include <stdbool.h>

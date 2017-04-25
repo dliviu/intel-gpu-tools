@@ -30,6 +30,7 @@
 #include <unistd.h>
 
 #include "igt_core.h"
+#include "igt_crc.h"
 #include "igt_debugfs.h"
 #include "igt_kms.h"
 

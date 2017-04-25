@@ -27,6 +27,7 @@
 #include <sys/poll.h>
 
 #include "igt.h"
+#include "igt_crc.h"
 #include "igt_rand.h"
 #include "igt_stats.h"
 

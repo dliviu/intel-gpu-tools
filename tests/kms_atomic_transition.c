@@ -22,6 +22,7 @@
  */
 
 #include "igt.h"
+#include "igt_crc.h"
 #include "drmtest.h"
 #include "sw_sync.h"
 #include <errno.h>
