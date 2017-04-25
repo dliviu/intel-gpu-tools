@@ -1575,9 +1575,6 @@ static void igt_output_refresh(igt_output_t *output)
 		igt_atomic_fill_connector_props(display, output,
 			IGT_NUM_CONNECTOR_PROPS, igt_connector_prop_names);
 
-	if (output->use_override_mode)
-		output->config.default_mode = output->override_mode;
-
 	if (output->config.pipe == PIPE_NONE)
 		return;
 
@@ -2816,7 +2813,10 @@ const char *igt_output_name(igt_output_t *output)
 
 drmModeModeInfo *igt_output_get_mode(igt_output_t *output)
 {
-	return &output->config.default_mode;
+	if (output->use_override_mode)
+		return &output->override_mode;
+	else
+		return &output->config.default_mode;
 }
 
 /**
@@ -2834,10 +2834,6 @@ void igt_output_override_mode(igt_output_t *output, drmModeModeInfo *mode)
 
 	if (mode)
 		output->override_mode = *mode;
-	else /* restore default_mode, may have been overwritten in igt_output_refresh */
-		kmstest_get_connector_default_mode(output->display->drm_fd,
-						   output->config.connector,
-						   &output->config.default_mode);
 
 	output->use_override_mode = !!mode;
 
