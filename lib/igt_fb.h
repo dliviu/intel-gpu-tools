@@ -43,6 +43,8 @@ typedef struct _cairo cairo_t;
 
 #include <i915_drm.h>
 
+#include "igt_crc.h"
+
 /**
  * igt_fb_t:
  * @fb_id: KMS ID of the framebuffer
@@ -155,6 +157,9 @@ uint32_t igt_bpp_depth_to_drm_format(int bpp, int depth);
 uint32_t igt_drm_format_to_bpp(uint32_t drm_format);
 const char *igt_format_str(uint32_t drm_format);
 void igt_get_all_cairo_formats(const uint32_t **formats, int *format_count);
+
+/* Get a hash for a framebuffer */
+int igt_fb_get_crc(struct igt_fb *fb, igt_crc_t *crc);
 
 #endif /* __IGT_FB_H__ */
 
