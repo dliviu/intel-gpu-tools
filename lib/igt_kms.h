@@ -37,6 +37,10 @@
 #include "igt_fb.h"
 #include "ioctl_wrappers.h"
 
+#ifndef DRM_MODE_CONNECTOR_WRITEBACK
+#define DRM_MODE_CONNECTOR_WRITEBACK   18
+#endif
+
 /* Low-level helpers with kmstest_ prefix */
 
 /**
@@ -109,6 +113,9 @@ extern const char *igt_crtc_prop_names[];
 enum igt_atomic_connector_properties {
        IGT_CONNECTOR_SCALING_MODE = 0,
        IGT_CONNECTOR_CRTC_ID,
+       IGT_CONNECTOR_WRITEBACK_PIXEL_FORMATS,
+       IGT_CONNECTOR_WRITEBACK_FB_ID,
+       IGT_CONNECTOR_WRITEBACK_OUT_FENCE_PTR,
        IGT_NUM_CONNECTOR_PROPS
 };
 
@@ -359,6 +366,10 @@ typedef struct {
 	unsigned long pending_crtc_idx_mask;
 	bool use_override_mode;
 	drmModeModeInfo override_mode;
+
+	struct igt_fb *writeback_fb;
+	int32_t writeback_out_fence_fd;
+	bool writeback_out_fence_requested;
 } igt_output_t;
 
 struct igt_display {
@@ -386,10 +397,15 @@ drmModeModeInfo *igt_output_get_mode(igt_output_t *output);
 void igt_output_override_mode(igt_output_t *output, drmModeModeInfo *mode);
 void igt_output_set_pipe(igt_output_t *output, enum pipe pipe);
 void igt_output_set_scaling_mode(igt_output_t *output, uint64_t scaling_mode);
+
 igt_plane_t *igt_output_get_plane(igt_output_t *output, int plane_idx);
 igt_plane_t *igt_output_get_plane_type(igt_output_t *output, int plane_type);
 igt_output_t *igt_output_from_connector(igt_display_t *display,
     drmModeConnector *connector);
+void igt_output_set_writeback_fb(igt_output_t *output, struct igt_fb *fb);
+void igt_output_request_writeback_out_fence(igt_output_t *output);
+int igt_output_get_last_writeback_out_fence(igt_output_t *output);
+
 igt_plane_t *igt_pipe_get_plane_type(igt_pipe_t *pipe, int plane_type);
 bool igt_pipe_get_property(igt_pipe_t *pipe, const char *name,
 			   uint32_t *prop_id, uint64_t *value,

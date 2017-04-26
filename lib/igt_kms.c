@@ -186,7 +186,10 @@ const char *igt_crtc_prop_names[IGT_NUM_CRTC_PROPS] = {
 
 const char *igt_connector_prop_names[IGT_NUM_CONNECTOR_PROPS] = {
 	"scaling mode",
-	"CRTC_ID"
+	"CRTC_ID",
+	"WRITEBACK_PIXEL_FORMATS",
+	"WRITEBACK_FB_ID",
+	"WRITEBACK_OUT_FENCE_PTR"
 };
 
 /*
@@ -1820,6 +1823,7 @@ void igt_display_init(igt_display_t *display, int drm_fd)
 		output->pending_crtc_idx_mask = 0;
 		output->id = resources->connectors[i];
 		output->display = display;
+		output->writeback_out_fence_fd = -1;
 
 		igt_output_refresh(output);
 
@@ -1863,6 +1867,42 @@ igt_output_t *igt_output_from_connector(igt_display_t *display,
 	return found;
 }
 
+void igt_output_set_writeback_fb(igt_output_t *output, struct igt_fb *fb)
+{
+	igt_display_t *display = output->display;
+	struct kmstest_connector_config *config = &output->config;
+
+	if (config->connector->connector_type != DRM_MODE_CONNECTOR_WRITEBACK)
+		return;
+
+	LOG(display, "%s: output_set_writeback_fb(%d)\n", output->name,
+	    fb ? fb->fb_id : 0);
+
+	output->writeback_fb = fb;
+}
+
+static void igt_output_reset_writeback_out_fence(igt_output_t *output)
+{
+	if (output->writeback_out_fence_fd >= 0) {
+		close(output->writeback_out_fence_fd);
+		output->writeback_out_fence_fd = -1;
+	}
+}
+
+void igt_output_request_writeback_out_fence(igt_output_t *output)
+{
+	igt_output_reset_writeback_out_fence(output);
+	output->writeback_out_fence_requested = true;
+}
+
+int igt_output_get_last_writeback_out_fence(igt_output_t *output)
+{
+	int fd = output->writeback_out_fence_fd;
+	output->writeback_out_fence_fd = -1;
+
+	return fd;
+}
+
 static void igt_pipe_fini(igt_pipe_t *pipe)
 {
 	int i;
@@ -1883,6 +1923,8 @@ static void igt_pipe_fini(igt_pipe_t *pipe)
 static void igt_output_fini(igt_output_t *output)
 {
 	kmstest_free_connector_config(&output->config);
+	if (output->writeback_out_fence_fd >= 0)
+		close(output->writeback_out_fence_fd);
 	free(output->name);
 	output->name = NULL;
 }
@@ -2499,10 +2541,41 @@ static void igt_atomic_prepare_connector_commit(igt_output_t *output, drmModeAto
 
 		igt_atomic_populate_connector_req(req, output, IGT_CONNECTOR_CRTC_ID, crtc_id);
 	}
+
+	if (output->writeback_fb) {
+		igt_atomic_populate_connector_req(req, output, IGT_CONNECTOR_WRITEBACK_FB_ID, output->writeback_fb->fb_id);
+		output->writeback_fb = NULL;
+	}
+
+	igt_output_reset_writeback_out_fence(output);
+	if (output->writeback_out_fence_requested) {
+		igt_atomic_populate_connector_req(req, output, IGT_CONNECTOR_WRITEBACK_OUT_FENCE_PTR,
+						  (uint64_t)(uintptr_t)&output->writeback_out_fence_fd);
+	}
+
 	/*
 	 *	TODO: Add all other connector level properties here
 	 */
+}
 
+static void handle_writeback_out_fences(igt_display_t *display, uint32_t flags, int ret)
+{
+	int i;
+
+	for (i = 0; i < display->n_outputs; i++) {
+		igt_output_t *output = &display->outputs[i];
+
+		if (!output->config.connector)
+			continue;
+
+		if (!output->writeback_out_fence_requested)
+			continue;
+
+		output->writeback_out_fence_requested = false;
+
+		if (ret || (flags & DRM_MODE_ATOMIC_TEST_ONLY))
+			igt_assert(output->writeback_out_fence_fd == -1);
+	}
 }
 
 /*
@@ -2551,6 +2624,7 @@ static int igt_atomic_commit(igt_display_t *display, uint32_t flags, void *user_
 	}
 
 	ret = drmModeAtomicCommit(display->drm_fd, req, flags, user_data);
+	handle_writeback_out_fences(display, flags, ret);
 	if (!ret) {
 
 		for_each_pipe(display, pipe) {
