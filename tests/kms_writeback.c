@@ -29,6 +29,7 @@
 
 #include "igt.h"
 #include "igt_fb.h"
+#include "sw_sync.h"
 
 /* We need to define these ourselves until we get an updated libdrm */
 #ifndef DRM_MODE_CONNECTOR_WRITEBACK
@@ -278,6 +279,115 @@ static void writeback_fb_id(igt_output_t *output, igt_fb_t *valid_fb, igt_fb_t *
 	igt_assert(ret == 0);
 }
 
+static void fill_fb(igt_fb_t *fb, double color[3])
+{
+	cairo_t *cr = igt_get_cairo_ctx(fb->fd, fb);
+	igt_assert(cr);
+
+	igt_paint_color(cr, 0, 0, fb->width, fb->height,
+			color[0], color[1], color[2]);
+}
+
+static void get_and_wait_out_fence(igt_output_t *output)
+{
+	int ret, out_fence = out_fence = igt_output_get_last_writeback_out_fence(output);
+	igt_assert(out_fence >= 0);
+
+	ret = sync_fence_wait(out_fence, 1000);
+	igt_assert(ret == 0);
+	close(out_fence);
+}
+
+static void writeback_seqence(igt_output_t *output, igt_plane_t *plane,
+			      igt_fb_t *in_fb, igt_fb_t *out_fbs[], int n_commits)
+{
+	int i, color_idx = 0;
+	double in_fb_colors[2][3] = {
+		{ 1.0, 0.0, 0.0 },
+		{ 0.0, 1.0, 0.0 },
+	};
+	double clear_color[3] = { 1.0, 1.0, 1.0 };
+	igt_crc_t cleared_crc, out_expected;
+
+	for (i = 0; i < n_commits; i++, color_idx++) {
+		/* Change the input color each time */
+		fill_fb(in_fb, in_fb_colors[color_idx % 2]);
+
+		if (out_fbs[i]) {
+			igt_crc_t out_before;
+
+			/* Get the expected CRC */
+			fill_fb(out_fbs[i], in_fb_colors[color_idx % 2]);
+			igt_fb_get_crc(out_fbs[i], &out_expected);
+
+			fill_fb(out_fbs[i], clear_color);
+			if (i == 0)
+				igt_fb_get_crc(out_fbs[i], &cleared_crc);
+			igt_fb_get_crc(out_fbs[i], &out_before);
+			igt_assert_crc_equal(&cleared_crc, &out_before);
+		}
+
+		/* Commit */
+		igt_plane_set_fb(plane, in_fb);
+		igt_output_set_writeback_fb(output, out_fbs[i]);
+		if (out_fbs[i])
+			igt_output_request_writeback_out_fence(output);
+		igt_display_commit_atomic(output->display,
+					  DRM_MODE_ATOMIC_ALLOW_MODESET,
+					  NULL);
+		if (out_fbs[i])
+			get_and_wait_out_fence(output);
+
+		/* Make sure the old output buffer is untouched */
+		if (i > 0 && out_fbs[i - 1] && (out_fbs[i] != out_fbs[i - 1])) {
+			igt_crc_t out_prev;
+			igt_fb_get_crc(out_fbs[i - 1], &out_prev);
+			igt_assert_crc_equal(&cleared_crc, &out_prev);
+		}
+
+		/* Make sure this output buffer is written */
+		if (out_fbs[i]) {
+			igt_crc_t out_after;
+			igt_fb_get_crc(out_fbs[i], &out_after);
+			igt_assert_crc_equal(&out_expected, &out_after);
+
+			/* And clear it, for the next time */
+			fill_fb(out_fbs[i], clear_color);
+		}
+	}
+}
+
+static void writeback_check_output(igt_output_t *output, igt_plane_t *plane,
+				   igt_fb_t *input_fb, igt_fb_t *output_fb)
+{
+	igt_fb_t *out_fbs[2] = { 0 };
+	igt_fb_t second_out_fb;
+	int ret;
+
+	/* One commit, with a writeback. */
+	writeback_seqence(output, plane, input_fb, &output_fb, 1);
+
+	/* Two commits, the second with no writeback */
+	out_fbs[0] = output_fb;
+	writeback_seqence(output, plane, input_fb, out_fbs, 2);
+
+	/* Two commits, both with writeback */
+	out_fbs[1] = output_fb;
+	writeback_seqence(output, plane, input_fb, out_fbs, 2);
+
+	ret = igt_create_fb(output_fb->fd, output_fb->width, output_fb->height,
+			    DRM_FORMAT_XRGB8888,
+			    igt_fb_mod_to_tiling(0),
+			    &second_out_fb);
+	igt_require(ret > 0);
+
+	/* Two commits, with different writeback buffers */
+	out_fbs[1] = &second_out_fb;
+	writeback_seqence(output, plane, input_fb, out_fbs, 2);
+
+	igt_remove_fb(output_fb->fd, &second_out_fb);
+}
+
 igt_main
 {
 	igt_display_t display;
@@ -360,6 +470,19 @@ igt_main
 		igt_require(ret > 0);
 
 		writeback_fb_id(output, &input_fb, &output_fb);
+
+		igt_remove_fb(display.drm_fd, &output_fb);
+	}
+
+	igt_subtest("writeback-check-output") {
+		igt_fb_t output_fb;
+		ret = igt_create_fb(display.drm_fd, mode.hdisplay, mode.vdisplay,
+				    DRM_FORMAT_XRGB8888,
+				    igt_fb_mod_to_tiling(0),
+				    &output_fb);
+		igt_require(ret > 0);
+
+		writeback_check_output(output, plane, &input_fb, &output_fb);
 
 		igt_remove_fb(display.drm_fd, &output_fb);
 	}
