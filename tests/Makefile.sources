@@ -135,6 +135,7 @@ TESTS_progs_M = \
 	kms_plane_scaling \
 	kms_panel_fitting \
 	kms_tv_load_detect \
+	kms_writeback \
 	pm_backlight \
 	pm_lpsp \
 	pm_rpm \

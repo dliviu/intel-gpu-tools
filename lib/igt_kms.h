@@ -527,6 +527,8 @@ static inline bool igt_output_is_connected(igt_output_t *output)
 #define igt_atomic_populate_plane_req(req, plane, prop, value) \
 	igt_assert_lt(0, drmModeAtomicAddProperty(req, plane->drm_plane->plane_id,\
 						  plane->atomic_props_plane[prop], value))
+void igt_atomic_prepare_plane_commit(igt_plane_t *plane, igt_pipe_t *pipe,
+	drmModeAtomicReq *req);
 
 /**
  * igt_atomic_populate_crtc_req:
@@ -538,6 +540,9 @@ static inline bool igt_output_is_connected(igt_output_t *output)
 #define igt_atomic_populate_crtc_req(req, pipe, prop, value) \
 	igt_assert_lt(0, drmModeAtomicAddProperty(req, pipe->crtc_id,\
 						  pipe->atomic_props_crtc[prop], value))
+
+void igt_atomic_prepare_crtc_commit(igt_pipe_t *pipe_obj, drmModeAtomicReq *req);
+
 /**
  * igt_atomic_populate_connector_req:
  * @req: A pointer to drmModeAtomicReq
@@ -548,6 +553,8 @@ static inline bool igt_output_is_connected(igt_output_t *output)
 #define igt_atomic_populate_connector_req(req, output, prop, value) \
 	igt_assert_lt(0, drmModeAtomicAddProperty(req, output->config.connector->connector_id,\
 						  output->config.atomic_props_connector[prop], value))
+
+void igt_atomic_prepare_connector_commit(igt_output_t *output, drmModeAtomicReq *req);
 
 void igt_enable_connectors(void);
 void igt_reset_connectors(void);

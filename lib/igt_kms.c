@@ -2098,7 +2098,7 @@ static uint32_t igt_plane_get_fb_gem_handle(igt_plane_t *plane)
 /*
  * Add position and fb changes of a plane to the atomic property set
  */
-static void
+void
 igt_atomic_prepare_plane_commit(igt_plane_t *plane, igt_pipe_t *pipe,
 	drmModeAtomicReq *req)
 {
@@ -2476,7 +2476,7 @@ igt_pipe_replace_blob(igt_pipe_t *pipe, uint64_t *blob, void *ptr, size_t length
 /*
  * Add crtc property changes to the atomic property set
  */
-static void igt_atomic_prepare_crtc_commit(igt_pipe_t *pipe_obj, drmModeAtomicReq *req)
+void igt_atomic_prepare_crtc_commit(igt_pipe_t *pipe_obj, drmModeAtomicReq *req)
 {
 	if (pipe_obj->background_changed)
 		igt_atomic_populate_crtc_req(req, pipe_obj, IGT_CRTC_BACKGROUND, pipe_obj->background);
@@ -2525,7 +2525,7 @@ static void igt_atomic_prepare_crtc_commit(igt_pipe_t *pipe_obj, drmModeAtomicRe
 /*
  * Add connector property changes to the atomic property set
  */
-static void igt_atomic_prepare_connector_commit(igt_output_t *output, drmModeAtomicReq *req)
+void igt_atomic_prepare_connector_commit(igt_output_t *output, drmModeAtomicReq *req)
 {
 
 	struct kmstest_connector_config *config = &output->config;
